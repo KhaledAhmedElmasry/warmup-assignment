@@ -51,7 +51,7 @@ function getShiftDuration(startTime, endTime) {
     let FinalSeconds = (TotalTimeInSeconds % 60).toString().padStart(2,"0")
     
     let FinalTime = `${FinalHours}:${FinalMinutes}:${FinalSeconds}`
-    
+
     return FinalTime
 
 }
@@ -63,7 +63,57 @@ function getShiftDuration(startTime, endTime) {
 // Returns: string formatted as h:mm:ss
 // ============================================================
 function getIdleTime(startTime, endTime) {
-    // TODO: Implement this function
+    let start = startTime.split(':');
+    let startIsPmOrAm = start[2].split(" ")
+
+    let end = endTime.split(":")
+    let endIsPmOrAm = end[2].split(" ")
+
+    let startHours = parseInt(start[0])
+    let startMinutes = parseInt(start[1])
+    let startSeconds = parseInt(startIsPmOrAm[0])
+
+    let endHours = parseInt(end[0])
+    let endMinutes = parseInt(end[1])
+    let endSeconds = parseInt(endIsPmOrAm[0])
+
+    
+    if(startIsPmOrAm[1] == "pm" && start[0] != 12){
+        startHours = startHours + 12;
+    }
+     if(endIsPmOrAm[1] == "pm" && end[0] != 12){
+        endHours = endHours + 12;
+    }
+    if(startIsPmOrAm[1] == "am" && start[0] == 12){
+        startHours = 0
+    }
+     if(endIsPmOrAm[1] == "am" && end[0] == 12){
+        endHours = 0
+    }
+
+    let startTotalInSeconds = startHours * 3600 + startMinutes * 60 + startSeconds;
+    let endTotalInSeconds = endHours * 3600 + endMinutes * 60 + endSeconds;
+
+    let deliveryStart = 8 * 3600;
+    let deliveryEnd = 22 * 3600;
+    
+    let idleSeconds = 0 ;
+
+    if(startTotalInSeconds < deliveryStart){
+        idleSeconds += deliveryStart - startTotalInSeconds;
+    }
+    if(endTotalInSeconds > deliveryEnd){
+        idleSeconds += endTotalInSeconds - deliveryEnd;
+    }
+
+    let finalIdleHours = Math.floor(idleSeconds/3600).toString()
+    let finalIdleMinutes = Math.floor((idleSeconds % 3600) / 60).toString().padStart(2,"0")
+    let finalIdleSeconds = Math.floor(idleSeconds % 60).toString().padStart(2,"0")
+
+    let finalIdleTotal = `${finalIdleHours}:${finalIdleMinutes}:${finalIdleSeconds}`
+
+    return finalIdleTotal
+    
 }
 
 // ============================================================
