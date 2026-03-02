@@ -7,7 +7,53 @@ const fs = require("fs");
 // Returns: string formatted as h:mm:ss
 // ============================================================
 function getShiftDuration(startTime, endTime) {
-    // TODO: Implement this function
+    let start = startTime.split(':');
+    let startIsPmOrAm = start[2].split(" ")
+
+    let end = endTime.split(":")
+    let endIsPmOrAm = end[2].split(" ")
+
+    let startHours = parseInt(start[0])
+    let startMinutes = parseInt(start[1])
+    let startSeconds = parseInt(startIsPmOrAm[0])
+
+    let endHours = parseInt(end[0])
+    let endMinutes = parseInt(end[1])
+    let endSeconds = parseInt(endIsPmOrAm[0])
+
+
+    if(startIsPmOrAm[1] == "pm" && start[0] != 12){
+        startHours = startHours + 12;
+    }
+     if(endIsPmOrAm[1] == "pm" && end[0] != 12){
+        endHours = endHours + 12;
+    }
+    if(startIsPmOrAm[1] == "am" && start[0] == 12){
+        startHours = 0
+    }
+     if(endIsPmOrAm[1] == "am" && end[0] == 12){
+        endHours = 0
+    }
+
+    let starthoursToSeconds = startHours * 3600;
+    let startMinutesToSeconds = startMinutes * 60;
+
+    let endhoursToSeconds = endHours * 3600;
+    let  endMinutesToSeconds = endMinutes * 60;
+
+    let startTotalTimeInSeconds = starthoursToSeconds + startMinutesToSeconds + startSeconds;
+    let endTotalTimeInSeconds = endhoursToSeconds + endMinutesToSeconds + endSeconds;
+
+    let TotalTimeInSeconds = endTotalTimeInSeconds - startTotalTimeInSeconds
+
+    let FinalHours = Math.floor(TotalTimeInSeconds/3600).toString();
+    let FinalMinutes = Math.floor((TotalTimeInSeconds % 3600) / 60).toString().padStart( 2,"0")
+    let FinalSeconds = (TotalTimeInSeconds % 60).toString().padStart(2,"0")
+    
+    let FinalTime = `${FinalHours}:${FinalMinutes}:${FinalSeconds}`
+    
+    return FinalTime
+
 }
 
 // ============================================================
