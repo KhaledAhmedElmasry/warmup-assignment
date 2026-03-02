@@ -157,6 +157,36 @@ function getActiveTime(shiftDuration, idleTime) {
 // Returns: boolean
 // ============================================================
 function metQuota(date, activeTime) {
+    let theDate = date.split("-")
+    
+    let year = parseInt(theDate[0])
+    let month = parseInt(theDate[1])
+    let day = parseInt(theDate[2])
+    
+    let quota;
+    if(year == 2025 && month == 4 && (day <= 30 && day >= 10)){
+        quota = 6 *3600
+    }else{
+        quota = 8 * 3600 + 24 * 60
+    }
+
+    let theActiveTime = activeTime.split(":")
+
+    let activeHours = parseInt(theActiveTime[0])
+    let activeMinutes = parseInt(theActiveTime[1])
+    let activeSeconds = parseInt(theActiveTime[2])
+
+    let activeHoursInSeconds = activeHours * 3600
+    let activeMinutesInSeconds = activeMinutes * 60
+
+    let totalActiveTimeInSeconds = activeHoursInSeconds + activeMinutesInSeconds + activeSeconds
+
+    if(totalActiveTimeInSeconds < quota){
+        return false
+    }else{
+        return true
+    }
+
 }
 
 // ============================================================
