@@ -123,7 +123,31 @@ function getIdleTime(startTime, endTime) {
 // Returns: string formatted as h:mm:ss
 // ============================================================
 function getActiveTime(shiftDuration, idleTime) {
-    // TODO: Implement this function
+    let shift = shiftDuration.split(":")
+    let idle = idleTime.split(":")
+
+    let shiftHours = parseInt(shift[0])
+    let shiftMinutes = parseInt(shift[1])
+    let shiftSeconds = parseInt(shift[2])
+
+    let idleHours = parseInt(idle[0])
+    let idletMinutes = parseInt(idle[1])
+    let idleSeconds = parseInt(idle[2])
+
+
+    let shiftTotalTime = shiftHours * 3600 + shiftMinutes * 60 + shiftSeconds
+    let idleTotalTime = idleHours * 3600 + idletMinutes * 60 + idleSeconds
+
+    let activeTimeInSeconds = shiftTotalTime - idleTotalTime
+
+    let activeHours = Math.floor(activeTimeInSeconds / 3600).toString()
+    let activeMinutes = Math.floor((activeTimeInSeconds % 3600) / 60).toString().padStart(2,"0")
+    let activeSeconds = Math.floor(activeTimeInSeconds % 60).toString().padStart(2,"0")
+
+    let totalActive = `${activeHours}:${activeMinutes}:${activeSeconds}`
+
+    return totalActive
+
 }
 
 // ============================================================
@@ -133,7 +157,6 @@ function getActiveTime(shiftDuration, idleTime) {
 // Returns: boolean
 // ============================================================
 function metQuota(date, activeTime) {
-    // TODO: Implement this function
 }
 
 // ============================================================
