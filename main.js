@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { text } = require("stream/consumers");
 
 // ============================================================
 // Function 1: getShiftDuration(startTime, endTime)
@@ -258,7 +259,27 @@ function addShiftRecord(textFile, shiftObj) {
 // Returns: nothing (void)
 // ============================================================
 function setBonus(textFile, driverID, date, newValue) {
-    // TODO: Implement this function
+    const rows = fs.readFileSync(textFile,'utf8').split("\n").filter(rows => rows != "").map(rows => rows.split(",")).map(row =>({
+    driverID: row[0],
+    driverName: row[1],
+    date: row[2],
+    startTime:row[3],
+    endTime: row[4],
+    shiftDuration: row[5],
+    idleTime: row[6],
+    activeTime: row[7],
+    metQuota: row[8],
+    hasBonus: row[9]
+    }))
+
+    for(let i = 0; i< rows.length ; i++){
+        if(rows[i].driverID == driverID && rows[i].date == date){
+            rows[i].hasBonus = newValue
+        }
+    }
+
+    const result = rows.map(row => `${row.driverID},${row.driverName},${row.date},${row.startTime},${row.endTime},${row.shiftDuration},${row.idleTime},${row.activeTime},${row.metQuota},${row.hasBonus}`).join("\n") 
+    fs.writeFileSync(textFile,result)
 }
 
 // ============================================================
