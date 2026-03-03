@@ -186,7 +186,6 @@ function metQuota(date, activeTime) {
     }else{
         return true
     }
-
 }
 
 // ============================================================
@@ -196,7 +195,58 @@ function metQuota(date, activeTime) {
 // Returns: object with 10 properties or empty object {}
 // ============================================================
 function addShiftRecord(textFile, shiftObj) {
-    // TODO: Implement this function
+   
+ const rows =  fs.readFileSync(textFile,'utf8').split("\n").filter(rows => rows != "").map(rows => rows.split(",")).map(row =>({
+    driverID: row[0],
+    driverName: row[1],
+    date: row[2],
+    startTime:row[3],
+    endTime: row[4],
+    shiftDuration: row[5],
+    idleTime: row[6],
+    activeTime: row[7],
+    metQuota: row[8],
+    hasBonus: row[9]
+
+ }))
+
+ if(rows.some(row => row.driverID == shiftObj.driverID && row.date == shiftObj.date)){
+         return {}
+ }else{
+   const shiftDuration = getShiftDuration(shiftObj.startTime,shiftObj.endTime)
+   const idleTime = getIdleTime(shiftObj.startTime,shiftObj.endTime)
+   const activeTime = getActiveTime(shiftDuration,idleTime)
+   const quotaMet = metQuota(shiftObj.date,activeTime)
+
+    const newRecord = {
+        
+        driverID: shiftObj.driverID,
+        driverName: shiftObj.driverName,
+        date: shiftObj.date,
+        startTime: shiftObj.startTime,
+        endTime: shiftObj.endTime,
+        shiftDuration: shiftDuration,
+        idleTime:idleTime,
+        activeTime: activeTime,
+        metQuota: quotaMet,
+        hasBonus: false
+  }
+  let lastIndex = -1;
+  for(let i = 0; i < rows.length ; i++){
+    if(rows[i].driverID == shiftObj.driverID){
+        lastIndex = i;
+    }
+  }
+ if(lastIndex == -1){
+    rows.push(newRecord)
+ }else{
+    rows.splice(lastIndex + 1,0,newRecord)
+  }
+  const result =  rows.map(row => `${row.driverID},${row.driverName},${row.date},${row.startTime},${row.endTime},${row.shiftDuration},${row.idleTime},${row.activeTime},${row.metQuota},${row.hasBonus}`).join("\n")
+ fs.writeFileSync(textFile,result)
+ return newRecord
+ }
+
 }
 
 // ============================================================
