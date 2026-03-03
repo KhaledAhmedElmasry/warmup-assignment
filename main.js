@@ -290,7 +290,33 @@ function setBonus(textFile, driverID, date, newValue) {
 // Returns: number (-1 if driverID not found)
 // ============================================================
 function countBonusPerMonth(textFile, driverID, month) {
-    // TODO: Implement this function
+    const rows = fs.readFileSync(textFile,'utf8').split("\n").filter(rows => rows != "").map(rows => rows.split(",")).map(row =>({
+    driverID: row[0],
+    driverName: row[1],
+    date: row[2],
+    startTime:row[3],
+    endTime: row[4],
+    shiftDuration: row[5],
+    idleTime: row[6],
+    activeTime: row[7],
+    metQuota: row[8],
+    hasBonus: row[9]
+    }))
+  
+    if(!rows.some(row => row.driverID == driverID)){
+      return -1;
+    }
+    
+    const filteredDate = rows.filter(row =>{
+        const rowMonth = parseInt(row.date.split("-")[1])
+        const inputMonth = parseInt(month)
+        return row.driverID == driverID && rowMonth == inputMonth && row.hasBonus.trim() == "true"
+    })
+
+   let length = filteredDate.length
+
+   return length;
+
 }
 
 // ============================================================
