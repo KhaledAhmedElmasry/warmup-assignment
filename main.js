@@ -327,7 +327,41 @@ function countBonusPerMonth(textFile, driverID, month) {
 // Returns: string formatted as hhh:mm:ss
 // ============================================================
 function getTotalActiveHoursPerMonth(textFile, driverID, month) {
-    // TODO: Implement this function
+    const rows = fs.readFileSync(textFile,'utf8').split("\n").filter(rows => rows != "").map(rows => rows.split(",")).map(row =>({
+    driverID: row[0],
+    driverName: row[1],
+    date: row[2],
+    startTime:row[3],
+    endTime: row[4],
+    shiftDuration: row[5],
+    idleTime: row[6],
+    activeTime: row[7],
+    metQuota: row[8],
+    hasBonus: row[9]
+    }))
+    const filteredRows = rows.filter(row =>{
+        const rowMonth = parseInt(row.date.split("-")[1])
+        const inputMonth = parseInt(month)
+        return row.driverID == driverID && rowMonth == inputMonth
+    })
+
+    if(filteredRows.length > 0){
+        
+        const TotalSeconds = filteredRows.reduce((total,row)=>{
+            let parts = row.activeTime.trim().split(":")
+            let totalSecondsActual = parseInt(parts[0]) *3600 +
+                                     parseInt(parts[1]) * 60 +
+                                     parseInt(parts[2])
+            return total + totalSecondsActual
+        },0)
+
+        let FinalHours = Math.floor(TotalSeconds/3600).toString();
+        let FinalMinutes = Math.floor((TotalSeconds % 3600) / 60).toString().padStart( 2,"0")
+        let FinalSeconds = (TotalSeconds % 60).toString().padStart(2,"0")
+
+        return `${FinalHours}:${FinalMinutes}:${FinalSeconds}`
+    }
+    return "0:00:00"
 }
 
 // ============================================================
