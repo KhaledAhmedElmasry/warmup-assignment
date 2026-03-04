@@ -346,7 +346,6 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
     })
 
     if(filteredRows.length > 0){
-        
         const TotalSeconds = filteredRows.reduce((total,row)=>{
             let parts = row.activeTime.trim().split(":")
             let totalSecondsActual = parseInt(parts[0]) *3600 +
@@ -361,6 +360,7 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
 
         return `${FinalHours}:${FinalMinutes}:${FinalSeconds}`
     }
+
     return "0:00:00"
 }
 
@@ -374,9 +374,59 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
 // Returns: string formatted as hhh:mm:ss
 // ============================================================
 function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, month) {
-    // TODO: Implement this function
-}
+    const rows = fs.readFileSync(textFile, 'utf8').split("\n").filter(row => row != "").map(row => row.split(",")).map(row => ({
+        driverID: row[0],
+        driverName: row[1],
+        date: row[2],
+        startTime: row[3],
+        endTime: row[4],
+        shiftDuration: row[5],
+        idleTime: row[6],
+        activeTime: row[7],
+        metQuota: row[8],
+        hasBonus: row[9]
+    }));
 
+    const rateRows = fs.readFileSync(rateFile, 'utf8').split("\n").filter(row => row != "").map(row => row.split(",")).map(row => ({
+        driverID: row[0],
+        dayOff: row[1],
+        basePay: row[2],
+        tier: row[3]
+    }));
+
+    const driverRate = rateRows.find(row => row.driverID == driverID);
+    const dayOff = driverRate.dayOff.trim();
+
+    const filteredRows = rows.filter(row => {
+        const rowMonth = parseInt(row.date.split("-")[1]);
+        const inputMonth = parseInt(month);
+
+        const dayName = new Date(row.date.trim()).toLocaleDateString("en-US", { weekday: "long" });
+
+        return row.driverID == driverID && rowMonth == inputMonth && dayName != dayOff;
+    });
+
+    let totalSeconds = filteredRows.reduce((total, row) => {
+        const date = row.date.trim();
+        const dateObj = new Date(date);
+        const month = dateObj.getMonth() + 1;
+        const day = dateObj.getDate();
+        const year = dateObj.getFullYear();
+
+        const isEid = year === 2025 && month === 4 && day >= 10 && day <= 30;
+        const dailyQuotaSeconds = isEid ? 6 * 3600 : 8 * 3600 + 24 * 60;
+
+        return total + dailyQuotaSeconds;
+    }, 0);
+
+    totalSeconds -= bonusCount * 2 * 3600;
+
+    const FinalHours = Math.floor(totalSeconds / 3600).toString();
+    const FinalMinutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, "0");
+    const FinalSeconds = (totalSeconds % 60).toString().padStart(2, "0");
+
+    return `${FinalHours}:${FinalMinutes}:${FinalSeconds}`;
+}
 // ============================================================
 // Function 10: getNetPay(driverID, actualHours, requiredHours, rateFile)
 // driverID: (typeof string)
@@ -386,7 +436,7 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
 // Returns: integer (net pay)
 // ============================================================
 function getNetPay(driverID, actualHours, requiredHours, rateFile) {
-    // TODO: Implement this function
+    
 }
 
 module.exports = {
