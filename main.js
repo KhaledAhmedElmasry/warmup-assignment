@@ -436,9 +436,49 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
 // Returns: integer (net pay)
 // ============================================================
 function getNetPay(driverID, actualHours, requiredHours, rateFile) {
-    
-}
+    const rateRows = fs.readFileSync(rateFile, 'utf8')
+        .split("\n")
+        .filter(row => row.trim() != "")
+        .map(row => row.trim().split(","))
+        .map(row => ({
+            driverID: row[0].trim(),
+            dayOff: row[1].trim(),
+            basePay: parseInt(row[2].trim()),
+            tier: parseInt(row[3].trim())
+        }));
 
+    const driverRate = rateRows.find(row => row.driverID == driverID.trim());
+    const basePay = driverRate.basePay;
+    const tier = driverRate.tier;
+
+    const toSeconds = (timeStr) => {
+        const parts = timeStr.trim().split(":");
+        return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+    }
+
+    const actualSeconds = toSeconds(actualHours);
+    const requiredSeconds = toSeconds(requiredHours);
+
+    if (actualSeconds >= requiredSeconds) {
+        return basePay;
+    }
+
+    const allowedMissingHours = { 1: 50, 2: 20, 3: 10, 4: 3 };
+    const allowedSeconds = allowedMissingHours[tier] * 3600;
+
+    const missingSeconds = requiredSeconds - actualSeconds;
+    const billableMissingSeconds = missingSeconds - allowedSeconds;
+
+    if (billableMissingSeconds <= 0) {
+        return basePay;
+    }
+
+    const billableFullHours = Math.floor(billableMissingSeconds / 3600);
+    const deductionRatePerHour = Math.floor(basePay / 185);
+    const salaryDeduction = billableFullHours * deductionRatePerHour;
+
+    return basePay - salaryDeduction;
+}
 module.exports = {
     getShiftDuration,
     getIdleTime,
