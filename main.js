@@ -1,5 +1,5 @@
 const fs = require("fs");
-const { text } = require("stream/consumers");
+
 
 // ============================================================
 // Function 1: getShiftDuration(startTime, endTime)
@@ -8,6 +8,9 @@ const { text } = require("stream/consumers");
 // Returns: string formatted as h:mm:ss
 // ============================================================
 function getShiftDuration(startTime, endTime) {
+    startTime = startTime.trim();
+    endTime = endTime.trim();
+
     let start = startTime.split(':');
     let startIsPmOrAm = start[2].split(" ")
 
@@ -23,16 +26,16 @@ function getShiftDuration(startTime, endTime) {
     let endSeconds = parseInt(endIsPmOrAm[0])
 
 
-    if(startIsPmOrAm[1] == "pm" && start[0] != 12){
+    if(startIsPmOrAm[1] == "pm" && startHours != 12){
         startHours = startHours + 12;
     }
-     if(endIsPmOrAm[1] == "pm" && end[0] != 12){
+     if(endIsPmOrAm[1] == "pm" && endHours != 12){
         endHours = endHours + 12;
     }
-    if(startIsPmOrAm[1] == "am" && start[0] == 12){
+    if(startIsPmOrAm[1] == "am" && startHours == 12){
         startHours = 0
     }
-     if(endIsPmOrAm[1] == "am" && end[0] == 12){
+     if(endIsPmOrAm[1] == "am" && endHours == 12){
         endHours = 0
     }
 
@@ -44,6 +47,10 @@ function getShiftDuration(startTime, endTime) {
 
     let startTotalTimeInSeconds = starthoursToSeconds + startMinutesToSeconds + startSeconds;
     let endTotalTimeInSeconds = endhoursToSeconds + endMinutesToSeconds + endSeconds;
+
+    if(endTotalTimeInSeconds < startTotalTimeInSeconds){
+    endTotalTimeInSeconds += 24 * 3600
+    }
 
     let TotalTimeInSeconds = endTotalTimeInSeconds - startTotalTimeInSeconds
 
@@ -64,59 +71,45 @@ function getShiftDuration(startTime, endTime) {
 // Returns: string formatted as h:mm:ss
 // ============================================================
 function getIdleTime(startTime, endTime) {
-    let start = startTime.split(':');
-    let startIsPmOrAm = start[2].split(" ")
+    startTime = startTime.trim();
+    endTime = endTime.trim();
 
-    let end = endTime.split(":")
-    let endIsPmOrAm = end[2].split(" ")
-
-    let startHours = parseInt(start[0])
-    let startMinutes = parseInt(start[1])
-    let startSeconds = parseInt(startIsPmOrAm[0])
-
-    let endHours = parseInt(end[0])
-    let endMinutes = parseInt(end[1])
-    let endSeconds = parseInt(endIsPmOrAm[0])
-
-    
-    if(startIsPmOrAm[1] == "pm" && start[0] != 12){
-        startHours = startHours + 12;
-    }
-     if(endIsPmOrAm[1] == "pm" && end[0] != 12){
-        endHours = endHours + 12;
-    }
-    if(startIsPmOrAm[1] == "am" && start[0] == 12){
-        startHours = 0
-    }
-     if(endIsPmOrAm[1] == "am" && end[0] == 12){
-        endHours = 0
+    function toSeconds(timeStr) {
+        let parts = timeStr.split(":");
+        let hour = parseInt(parts[0]);
+        let minute = parseInt(parts[1]);
+        let secAndPeriod = parts[2].split(" ");
+        let second = parseInt(secAndPeriod[0]);
+        let period = secAndPeriod[1];
+        if (period == "pm" && hour != 12) hour += 12;
+        if (period == "am" && hour == 12) hour = 0;
+        return hour * 3600 + minute * 60 + second;
     }
 
-    let startTotalInSeconds = startHours * 3600 + startMinutes * 60 + startSeconds;
-    let endTotalInSeconds = endHours * 3600 + endMinutes * 60 + endSeconds;
-
-    let deliveryStart = 8 * 3600;
-    let deliveryEnd = 22 * 3600;
-    
-    let idleSeconds = 0 ;
-
-    if(startTotalInSeconds < deliveryStart){
-        idleSeconds += deliveryStart - startTotalInSeconds;
-    }
-    if(endTotalInSeconds > deliveryEnd){
-        idleSeconds += endTotalInSeconds - deliveryEnd;
+    function overlap(aStart, aEnd, bStart, bEnd) {
+        return Math.max(0, Math.min(aEnd, bEnd) - Math.max(aStart, bStart));
     }
 
-    let finalIdleHours = Math.floor(idleSeconds/3600).toString()
-    let finalIdleMinutes = Math.floor((idleSeconds % 3600) / 60).toString().padStart(2,"0")
-    let finalIdleSeconds = Math.floor(idleSeconds % 60).toString().padStart(2,"0")
+    let start = toSeconds(startTime);
+    let end = toSeconds(endTime);
 
-    let finalIdleTotal = `${finalIdleHours}:${finalIdleMinutes}:${finalIdleSeconds}`
+    if (end < start) end += 24 * 3600;
 
-    return finalIdleTotal
-    
+    let shiftDuration = end - start;
+    let validSeconds = overlap(start, end, 8 * 3600, 22 * 3600);
+
+    if (end > 24 * 3600) {
+        validSeconds += overlap(start, end, 24 * 3600 + 8 * 3600, 24 * 3600 + 22 * 3600);
+    }
+
+    let idleSeconds = shiftDuration - validSeconds;
+
+    let hours = Math.floor(idleSeconds / 3600).toString();
+    let minutes = Math.floor((idleSeconds % 3600) / 60).toString().padStart(2, "0");
+    let seconds = (idleSeconds % 60).toString().padStart(2, "0");
+
+    return `${hours}:${minutes}:${seconds}`;
 }
-
 // ============================================================
 // Function 3: getActiveTime(shiftDuration, idleTime)
 // shiftDuration: (typeof string) formatted as h:mm:ss
@@ -132,15 +125,15 @@ function getActiveTime(shiftDuration, idleTime) {
     let shiftSeconds = parseInt(shift[2])
 
     let idleHours = parseInt(idle[0])
-    let idletMinutes = parseInt(idle[1])
+    let idleMinutes = parseInt(idle[1])
     let idleSeconds = parseInt(idle[2])
 
 
     let shiftTotalTime = shiftHours * 3600 + shiftMinutes * 60 + shiftSeconds
-    let idleTotalTime = idleHours * 3600 + idletMinutes * 60 + idleSeconds
+    let idleTotalTime = idleHours * 3600 + idleMinutes * 60 + idleSeconds
 
-    let activeTimeInSeconds = shiftTotalTime - idleTotalTime
-
+    let activeTimeInSeconds = Math.max(0, shiftTotalTime - idleTotalTime)
+    
     let activeHours = Math.floor(activeTimeInSeconds / 3600).toString()
     let activeMinutes = Math.floor((activeTimeInSeconds % 3600) / 60).toString().padStart(2,"0")
     let activeSeconds = Math.floor(activeTimeInSeconds % 60).toString().padStart(2,"0")
@@ -165,7 +158,7 @@ function metQuota(date, activeTime) {
     let day = parseInt(theDate[2])
     
     let quota;
-    if(year == 2025 && month == 4 && (day <= 30 && day >= 10)){
+    if(year === 2025 && month === 4 && day >= 10 && day <= 30){
         quota = 6 *3600
     }else{
         quota = 8 * 3600 + 24 * 60
@@ -197,7 +190,7 @@ function metQuota(date, activeTime) {
 // ============================================================
 function addShiftRecord(textFile, shiftObj) {
    
- const rows =  fs.readFileSync(textFile,'utf8').split("\n").filter(rows => rows != "").map(rows => rows.split(",")).map(row =>({
+ const rows =  fs.readFileSync(textFile,'utf8').split("\n").filter(rows => rows.trim() != "").map(rows => rows.split(",")).map(row =>({
     driverID: row[0],
     driverName: row[1],
     date: row[2],
@@ -244,7 +237,7 @@ function addShiftRecord(textFile, shiftObj) {
     rows.splice(lastIndex + 1,0,newRecord)
   }
   const result =  rows.map(row => `${row.driverID},${row.driverName},${row.date},${row.startTime},${row.endTime},${row.shiftDuration},${row.idleTime},${row.activeTime},${row.metQuota},${row.hasBonus}`).join("\n")
- fs.writeFileSync(textFile,result)
+ fs.writeFileSync(textFile,result + "\n")
  return newRecord
  }
 
@@ -259,7 +252,7 @@ function addShiftRecord(textFile, shiftObj) {
 // Returns: nothing (void)
 // ============================================================
 function setBonus(textFile, driverID, date, newValue) {
-    const rows = fs.readFileSync(textFile,'utf8').split("\n").filter(rows => rows != "").map(rows => rows.split(",")).map(row =>({
+    const rows = fs.readFileSync(textFile,'utf8').split("\n").filter(rows => rows.trim() != "").map(rows => rows.split(",")).map(row =>({
     driverID: row[0],
     driverName: row[1],
     date: row[2],
@@ -279,7 +272,7 @@ function setBonus(textFile, driverID, date, newValue) {
     }
 
     const result = rows.map(row => `${row.driverID},${row.driverName},${row.date},${row.startTime},${row.endTime},${row.shiftDuration},${row.idleTime},${row.activeTime},${row.metQuota},${row.hasBonus}`).join("\n") 
-    fs.writeFileSync(textFile,result)
+    fs.writeFileSync(textFile,result +"\n")
 }
 
 // ============================================================
@@ -290,7 +283,7 @@ function setBonus(textFile, driverID, date, newValue) {
 // Returns: number (-1 if driverID not found)
 // ============================================================
 function countBonusPerMonth(textFile, driverID, month) {
-    const rows = fs.readFileSync(textFile,'utf8').split("\n").filter(rows => rows != "").map(rows => rows.split(",")).map(row =>({
+    const rows = fs.readFileSync(textFile,'utf8').split("\n").filter(rows => rows.trim() != "").map(rows => rows.split(",")).map(row =>({
     driverID: row[0],
     driverName: row[1],
     date: row[2],
@@ -310,7 +303,7 @@ function countBonusPerMonth(textFile, driverID, month) {
     const filteredDate = rows.filter(row =>{
         const rowMonth = parseInt(row.date.split("-")[1])
         const inputMonth = parseInt(month)
-        return row.driverID == driverID && rowMonth == inputMonth && row.hasBonus.trim() == "true"
+        return row.driverID == driverID && rowMonth == inputMonth && String(row.hasBonus).trim() === "true"
     })
 
    let length = filteredDate.length
@@ -327,7 +320,7 @@ function countBonusPerMonth(textFile, driverID, month) {
 // Returns: string formatted as hhh:mm:ss
 // ============================================================
 function getTotalActiveHoursPerMonth(textFile, driverID, month) {
-    const rows = fs.readFileSync(textFile,'utf8').split("\n").filter(rows => rows != "").map(rows => rows.split(",")).map(row =>({
+    const rows = fs.readFileSync(textFile,'utf8').split("\n").filter(rows => rows.trim() != "").map(rows => rows.split(",")).map(row =>({
     driverID: row[0],
     driverName: row[1],
     date: row[2],
@@ -375,8 +368,8 @@ function getTotalActiveHoursPerMonth(textFile, driverID, month) {
 // ============================================================
 function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, month) {
     const rows = fs.readFileSync(textFile, 'utf8').split("\n").filter(row => row != "").map(row => row.split(",")).map(row => ({
-        driverID: row[0],
-        driverName: row[1],
+        driverID: row[0].trim(),
+        driverName: row[1].trim(),
         date: row[2],
         startTime: row[3],
         endTime: row[4],
@@ -388,39 +381,41 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
     }));
 
     const rateRows = fs.readFileSync(rateFile, 'utf8').split("\n").filter(row => row != "").map(row => row.split(",")).map(row => ({
-        driverID: row[0],
-        dayOff: row[1],
+        driverID: row[0].trim(),
+        dayOff: row[1].trim(),
         basePay: row[2],
         tier: row[3]
     }));
 
     const driverRate = rateRows.find(row => row.driverID == driverID);
+    if(!driverRate){
+    return "0:00:00"
+    }
     const dayOff = driverRate.dayOff.trim();
 
     const filteredRows = rows.filter(row => {
         const rowMonth = parseInt(row.date.split("-")[1]);
         const inputMonth = parseInt(month);
 
-        const dayName = new Date(row.date.trim()).toLocaleDateString("en-US", { weekday: "long" });
+        const dayName = new Date(row.date.trim() + "T00:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
 
         return row.driverID == driverID && rowMonth == inputMonth && dayName != dayOff;
     });
 
     let totalSeconds = filteredRows.reduce((total, row) => {
-        const date = row.date.trim();
-        const dateObj = new Date(date);
-        const month = dateObj.getMonth() + 1;
-        const day = dateObj.getDate();
-        const year = dateObj.getFullYear();
+        const dateParts = row.date.trim().split("-");
+        const year = parseInt(dateParts[0]);
+        const mon = parseInt(dateParts[1]);
+        const day = parseInt(dateParts[2]);
 
-        const isEid = year === 2025 && month === 4 && day >= 10 && day <= 30;
+        const isEid = year === 2025 && mon === 4 && day >= 10 && day <= 30;
         const dailyQuotaSeconds = isEid ? 6 * 3600 : 8 * 3600 + 24 * 60;
 
         return total + dailyQuotaSeconds;
     }, 0);
 
     totalSeconds -= bonusCount * 2 * 3600;
-
+    if (totalSeconds < 0) totalSeconds = 0;
     const FinalHours = Math.floor(totalSeconds / 3600).toString();
     const FinalMinutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, "0");
     const FinalSeconds = (totalSeconds % 60).toString().padStart(2, "0");
@@ -448,6 +443,9 @@ function getNetPay(driverID, actualHours, requiredHours, rateFile) {
         }));
 
     const driverRate = rateRows.find(row => row.driverID == driverID.trim());
+    if(!driverRate){
+    return 0
+    }
     const basePay = driverRate.basePay;
     const tier = driverRate.tier;
 
@@ -464,7 +462,7 @@ function getNetPay(driverID, actualHours, requiredHours, rateFile) {
     }
 
     const allowedMissingHours = { 1: 50, 2: 20, 3: 10, 4: 3 };
-    const allowedSeconds = allowedMissingHours[tier] * 3600;
+    const allowedSeconds = (allowedMissingHours[tier] || 0) * 3600;
 
     const missingSeconds = requiredSeconds - actualSeconds;
     const billableMissingSeconds = missingSeconds - allowedSeconds;
