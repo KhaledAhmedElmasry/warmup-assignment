@@ -1,6 +1,4 @@
 const fs = require("fs");
-
-
 // ============================================================
 // Function 1: getShiftDuration(startTime, endTime)
 // startTime: (typeof string) formatted as hh:mm:ss am or hh:mm:ss pm
@@ -475,7 +473,8 @@ function getNetPay(driverID, actualHours, requiredHours, rateFile) {
     const deductionRatePerHour = Math.floor(basePay / 185);
     const salaryDeduction = billableFullHours * deductionRatePerHour;
 
-    return basePay - salaryDeduction;
+    return Math.max(0, basePay - salaryDeduction);
+    
 }
 module.exports = {
     getShiftDuration,
